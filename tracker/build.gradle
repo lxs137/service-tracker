@@ -1,0 +1,118 @@
+apply plugin: 'com.android.library'
+
+android {
+    compileSdkVersion 27
+
+
+    defaultConfig {
+        minSdkVersion 21
+        targetSdkVersion 27
+
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+dependencies {
+    implementation group: 'commons-cli', name: 'commons-cli', version: '1.4'
+    implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.11'
+    implementation fileTree(dir: 'libs/3rd', include: ['*.jar'])
+    testImplementation 'junit:junit:4.12'
+}
+
+task packToJar (dependsOn: 'compileReleaseJavaWithJavac'){
+    doLast {
+        def dx_command = "${android.sdkDirectory}/build-tools/${android.buildToolsVersion}/dx"
+        //def classes_dir = "${buildDir}/intermediates/classes/release"
+        def classes_dir = "${buildDir}/intermediates/javac/release/compileReleaseJavaWithJavac/classes"
+        def output_dir = new File("${buildDir}/intermediates/jar")
+        output_dir.mkdirs()
+        exec {
+            ignoreExitValue true
+            commandLine dx_command, "--dex", "--output=${output_dir}/${project.name}.jar", "${classes_dir}/"
+        }
+    }
+}
+
+task createCmdlineScript {
+    doLast {
+        def home_dir = "/data/local/tmp/tracker"
+        def script_dir = new File("${buildDir}/intermediates/scripts")
+        script_dir.mkdirs()
+        def file = new File("$script_dir.absolutePath/${project.name}")
+        file.createNewFile()
+        file.text = """
+export CLASSPATH=${home_dir}/tracker.jar:${home_dir}/commons-cli-1.4.jar:${home_dir}/commons-lang3-3.11.jar
+trap "" HUP
+exec app_process /system/bin io.menya.tracker.Main \$@ > ${home_dir}/tracker.log &
+"""
+    }
+
+}
+
+task buildApp (type: Copy) {
+    dependsOn 'externalNativeBuildRelease'
+    dependsOn 'packToJar'
+    dependsOn 'createCmdlineScript'
+
+    doLast {
+        for (String abi_version : android.defaultConfig.ndk.abiFilters) {
+            def target_dir = "${buildDir}/outputs/app_process/${abi_version}/"
+            new File(target_dir).mkdirs()
+            copy {
+                from "${buildDir}/intermediates/cmake/release/obj/${abi_version}"
+                into target_dir
+                include "*"
+            }
+        }
+    }
+
+    from ("${buildDir}/intermediates/jar") {
+        include "*.jar"
+    }
+    from ("${buildDir}/intermediates/scripts"){
+        include "${project.name}"
+    }
+    from("libs/3rd"){
+        include "*.jar"
+    }
+    into "${buildDir}/outputs/app_process/"
+}
+
+task installApp () {
+    dependsOn 'buildApp'
+
+    doLast {
+        def home_dir = "/data/local/tmp/tracker"
+        exec {
+            commandLine android.adbExecutable, "shell", "mkdir -p ${home_dir}"
+        }
+
+        new File("${buildDir}/outputs/app_process/").listFiles().each { File file ->
+            exec{
+                commandLine android.adbExecutable, "push", file, home_dir
+                ignoreExitValue = true
+            }
+        }
+
+        exec{
+            commandLine android.adbExecutable, "shell", "su -c 'chmod 777 ${home_dir}/${project.name}'"
+            ignoreExitValue = true
+        }
+
+        for (String abi_version : android.defaultConfig.ndk.abiFilters) {
+            exec {
+                commandLine android.adbExecutable, "shell", "su -c 'chmod 777 ${home_dir}/${abi_version}/injector'"
+                ignoreExitValue = true
+            }
+        }
+    }
+}
