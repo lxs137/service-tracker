@@ -4,13 +4,16 @@
 #ifndef INJECTOR_INJECT_AGENT_H
 #define INJECTOR_INJECT_AGENT_H
 
-#include "tcp_client_server/tcp_server.h"
-#include "hack_action.h"
+#include "tcp_client_server/server.h"
+#include "base/hack_action.h"
 
-class InjectAgentHandler : HackActionHandler {
-public:
-    static void handle(const Client & client, const char * msg, size_t size);
-    static void disconnect(const Client & client) { logDisconnect(client); }
-};
+TRACKER_INJECTOR_BEGIN
+
+namespace InjectAgentHandler {
+  static std::mutex injectorLock;
+  extern void handle(const Client & client, const char * msg, size_t size);
+}
+
+TRACKER_INJECTOR_END
 
 #endif //INJECTOR_INJECT_AGENT_H

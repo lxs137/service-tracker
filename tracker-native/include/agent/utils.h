@@ -5,40 +5,28 @@
 #ifndef AGENT_UTILS_H
 #define AGENT_UTILS_H
 
-#include <string>
+#include <iostream>
+#include <map>
 
-#include "android/log.h"
+#include "frida-gum.h"
 
-#include "utils.h"
+#include "base/utils.h"
+#include "agent/types.h"
 
-const char *LOG_TAG = std::string("Agent(" + std::to_string(getpid()) + ")").c_str();
+TRACKER_AGENT_BEGIN
 
-void inline LOG_FAULT(const char* fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    __android_log_print(ANDROID_LOG_FATAL, LOG_TAG, fmt, args);
-    va_end(args);
-}
+extern const char *LOG_TAG;
 
-void inline LOG_ERROR(const char* fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, fmt, args);
-    va_end(args);
-}
+static const std::vector<std::string> IGNORE_MODULES = {
+    "libc.so", "libc++.so", "libutils.so",
+    "libagent.so"
+};
 
-void inline LOG_INFO(const char* fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    __android_log_print(ANDROID_LOG_INFO, LOG_TAG, fmt, args);
-    va_end(args);
-}
+static FridaContext fridaContext = {
+    nullptr,
+    nullptr,
+};
 
-void inline LOG_DEBUG(const char* fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, fmt, args);
-    va_end(args);
-}
+TRACKER_AGENT_END
 
 #endif //AGENT_UTILS_H
