@@ -1,60 +1,45 @@
-
+//
+// Created by liao xiangsen on 11/25/20.
+//
 
 #ifndef INTERCOM_TCP_SERVER_H
 #define INTERCOM_TCP_SERVER_H
 
+#include "server.h"
 
-
-#include <vector>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <thread>
-#include <functional>
-#include <cstring>
-#include <errno.h>
-#include <iostream>
-#include "client.h"
-#include "server_observer.h"
-#include "pipe_ret_t.h"
-
-
-#define MAX_PACKET_SIZE 4096
-
-class TcpServer
-{
+class TCPServer : public Server {
 private:
-
-    int m_sockfd;
-    struct sockaddr_in m_serverAddress;
-    struct sockaddr_in m_clientAddress;
-    fd_set m_fds;
-    std::vector<Client> m_clients;
-    std::vector<server_observer_t> m_subscibers;
-    std::thread * threadHandle;
-
-    void publishClientMsg(const Client & client, const char * msg, size_t msgSize);
-    void publishClientDisconnected(const Client & client);
-    void receiveTask(/*void * context*/);
-
-
+  int port;
 public:
+  TCPServer(int _port): Server() {
+    this->port = _port;
+  }
+  pipe_ret_t startServer() {
+      pipe_ret_t ret;
+      struct sockaddr_in addr;
+      memset(&addr, 0, sizeof(addr));
+      addr.sin_family = AF_INET;
+      addr.sin_addr.s_addr = htonl(INADDR_ANY);
+      addr.sin_port = htons(this->port);
 
-    pipe_ret_t start(int port);
-    Client acceptClient(uint timeout_sec);
-    bool deleteClient(Client & client);
-    void subscribe(const server_observer_t & observer);
-    void unsubscribeAll();
-    pipe_ret_t sendToAllClients(const char * msg, size_t size);
-    static pipe_ret_t sendToClient(const Client & client, const char * msg, size_t size);
-    pipe_ret_t finish();
-    void printClients();
+      m_sockfd = socket(AF_INET, SOCK_STREAM, 0);
+      if (m_sockfd < 0) {
+          goto error;
+      }
+      if (bind(m_sockfd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+          goto error;
+      }
+      if (listen(m_sockfd, LISTEN_CLIENTS_QUEUE_SIZE) < 0) {
+          goto error;
+      }
+      ret.success = true;
+      return ret;
+
+      error:
+      ret.success = false;
+      ret.msg = strerror(errno);
+      return ret;
+  }
 };
-
-
 
 #endif //INTERCOM_TCP_SERVER_H
