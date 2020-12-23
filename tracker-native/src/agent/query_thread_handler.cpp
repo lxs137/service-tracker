@@ -10,7 +10,7 @@
 #define THREAD_NAME_MAX_LEN 16
 
 TRACKER_AGENT_USING
-const char *QueryThreadHandler::LOG_TAG = "agent[" STRINGIFY(ARCH_ABI) "].query_thread";
+const char *QueryThreadHandler::LOG_TAG = "tracker.agent[" STRINGIFY(ARCH_ABI) "].query_thread";
 
 void QueryThreadHandler::handle(const Client & client, const char * msg, size_t size) {
     HackAction action;

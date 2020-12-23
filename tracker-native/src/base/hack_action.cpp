@@ -13,10 +13,10 @@
 TRACKER_BEGIN
 
 HackActionCommand parseHackAction(HackAction &hackAction, const char * msg, size_t size) {
-    __android_log_print(ANDROID_LOG_INFO, "Injector.HackActionHandler",
+    __android_log_print(ANDROID_LOG_INFO, "tracker",
                         "Got client msg : %s", msg);
     if (hackAction.data.Parse(msg).HasParseError()) {
-        __android_log_print(ANDROID_LOG_ERROR, "Injector.HackActionHandler",
+        __android_log_print(ANDROID_LOG_ERROR, "tracker",
                             "invalid json: %s", rapidjson::GetParseError_En(hackAction.data.GetParseError()));
         return Invalid;
     }
@@ -29,7 +29,7 @@ HackActionCommand parseHackAction(HackAction &hackAction, const char * msg, size
 }
 
 void logDisconnect(const Client & client) {
-    __android_log_print(ANDROID_LOG_INFO, "Injector.HackActionHandler",
+    __android_log_print(ANDROID_LOG_INFO, "tracker",
                         "Client(%s:%d) disconnected", client.getIp().c_str(), client.getPort());
 }
 

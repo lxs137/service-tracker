@@ -5,6 +5,6 @@
 #ifndef INJECTOR_UTILS_H
 #define INJECTOR_UTILS_H
 
-#define LOG_TAG "injector[" STRINGIFY(ARCH_ABI) "]"
+#define LOG_TAG "tracker.injector[" STRINGIFY(ARCH_ABI) "]"
 
 #endif //INJECTOR_UTILS_H

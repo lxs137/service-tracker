@@ -20,6 +20,7 @@ enum HackActionCommand {
   InjectAgent = 1,
   QueryThread = 2,
   TraceThread = 3,
+  QueryCoverageInfo = 4,
 
   MAX_HACK_ACTION_COMMAND,
 };

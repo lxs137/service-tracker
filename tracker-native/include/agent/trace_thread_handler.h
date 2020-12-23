@@ -17,27 +17,19 @@
 TRACKER_AGENT_BEGIN
 
 namespace TraceThreadHandler {
+  extern thread_local TransformerContext transformerContext;
+
   extern const char *LOG_TAG;
 
-  static std::mutex tracingLock;
+  extern GumStalkerTransformerCallback transformerPtr;
+
+  extern std::mutex tracingLock, coverageLock;
   static std::vector<GumThreadId> followingThreads;
-  // map<tid, info>
-  static std::map<int, ThreadCoverageInfo> coverageInfo;
+  extern std::map<GumThreadId, ThreadCoverageInfo*> coverageInfoMap;
 
   extern void handle(const Client & client, const char * msg, size_t size);
 }
 
-static GumStalkerTransformerCallback instructionTransformer;
-
 TRACKER_AGENT_END
-
-
-//#if ARCH_ABI == arm64-v8a
-//void arm64_transformWhileCodeBlockEnd(GumStalkerIterator *iterator, GumStalkerOutput *output, gpointer user_data);
-//static GumStalkerTransformerCallback instructionTransformer = arm64_transformWhileCodeBlockEnd;
-//#elif ARCH_ABI == armeabi-v7a
-//void arm_transformWhileCodeBlockEnd(GumStalkerIterator *iterator, GumStalkerOutput *output, gpointer user_data);
-//static GumStalkerTransformerCallback instructionTransformer = transformerForCodeBlock;
-//#endif
 
 #endif //AGENT_TRACE_THREAD_H

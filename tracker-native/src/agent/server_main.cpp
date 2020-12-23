@@ -1,5 +1,6 @@
 #include <string>
 #include <sys/prctl.h>
+#include <agent/trace_thread_handler.h>
 
 #include "frida-gum.h"
 
@@ -10,7 +11,9 @@
 #include "base/utils.h"
 
 TRACKER_AGENT_USING
-const char* tracker::agent::LOG_TAG = "agent[" STRINGIFY(ARCH_ABI) "]";
+using ::LOG_TAG;
+
+FridaContext *tracker::agent::fridaContext = new FridaContext;
 
 // we don't care code in some modules
 static gboolean excludeModule(const GumModuleDetails *details, gpointer user_data) {
@@ -18,7 +21,7 @@ static gboolean excludeModule(const GumModuleDetails *details, gpointer user_dat
         if (g_strcmp0(details->name, module.c_str()) == 0) {
             LOG_INFO("Exclude module %s %s %p-%p", details->name, details->path,
                      (void *)details->range->base_address, (void *)(details->range->base_address + details->range->size));
-            gum_stalker_exclude(fridaContext.stalker, details->range);
+            gum_stalker_exclude(fridaContext->stalker, details->range);
             return FALSE;
         }
     }
@@ -36,26 +39,35 @@ void checkProcess() {
     prctl(PR_SET_DUMPABLE, 1);
     gint result = prctl(PR_GET_DUMPABLE);
     g_assert_cmpint(result, ==, 1);
+
+    std::string cmdLine("ulimit -s unlimited; ulimit -s");
+
+    FILE *cmd = popen(cmdLine.c_str(), "r");
+    gchar *line = (gchar *) g_malloc0(50);
+    fgets(line, 50, cmd);
+    pclose(cmd);
+
+    LOG_INFO("ulimit %s", line);
 }
 
 void initFridaContext() {
     gum_init_embedded();
 
-    fridaContext.stalker = gum_stalker_new();
+    fridaContext->stalker = gum_stalker_new();
     /**
      * `trust_threshold` meaning:
      * The idea is that we keep checking whether a block changed every time we’re about to execute it,
      * and once it’s been successfully recycled trust-threshold times we consider it trusted,
      * and backpatch static branches with a branch straight to the recompiled target.
      */
-    gum_stalker_set_trust_threshold(fridaContext.stalker, 2);
+    gum_stalker_set_trust_threshold(fridaContext->stalker, 2);
 
     gum_process_enumerate_modules(excludeModule, nullptr);
 
-    fridaContext.moduleMap = gum_module_map_new_filtered(excludeModule, nullptr, nullptr);
-    gum_module_map_update(fridaContext.moduleMap);
+    fridaContext->moduleMap = gum_module_map_new_filtered(excludeModule, nullptr, nullptr);
+    gum_module_map_update(fridaContext->moduleMap);
 
-    GArray *modules = gum_module_map_get_values(fridaContext.moduleMap);
+    GArray *modules = gum_module_map_get_values(fridaContext->moduleMap);
     LOG_INFO("modules count: %d", modules->len);
 
     LOG_INFO("stalker init done");
@@ -85,12 +97,11 @@ void agent_server(const gchar *data, gboolean *stay_resident) {
     observerDoQuery.wantedIp = "";
     agentServer.subscribe(observerDoQuery);
 
-//    TraceThreadHandler::context = &fridaContext;
-//    server_observer_t observerDoTrace;
-//    observerDoTrace.incoming_packet_func = TraceThreadHandler::handle;
-//    observerDoTrace.disconnected_func = TraceThreadHandler::disconnect;
-//    observerDoTrace.wantedIp = "";
-//    agentServer.subscribe(observerDoTrace);
+    server_observer_t observerDoTrace;
+    observerDoTrace.incoming_packet_func = TraceThreadHandler::handle;
+    observerDoTrace.disconnected_func = tracker::logDisconnect;
+    observerDoTrace.wantedIp = "";
+    agentServer.subscribe(observerDoTrace);
 
     while(true) {
         Client client = agentServer.acceptClient(10);
@@ -103,13 +114,43 @@ void agent_server(const gchar *data, gboolean *stay_resident) {
     }
 }
 
+void dummy_1() {
+    while (true) {
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+        LOG_INFO("dummy thread-1 sleeping......");
+    }
+}
+
+void dummy_2() {
+    while (true) {
+        std::this_thread::sleep_for(std::chrono::seconds(3));
+        LOG_INFO("dummy thread-2 sleeping......");
+    }
+}
 
 int main(int argc, char *argv[]) {
-    gboolean keepResident;
-    agent_server("/data/local/tmp/tracker/sockets/agent.socket", &keepResident);
+    std::thread dummyThread1(dummy_1), dummyThread2(dummy_2);
+
+    int pid = getpid();
+    LOG_INFO("tester server pid: %d", pid);
+
+    checkProcess();
+    initFridaContext();
+
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+
+    std::string msg(string_format(R"({ "command": 3, "tids": [%d, %d] })", pid + 1, pid + 2));
+    Client dummyClient;
+    TraceThreadHandler::handle(dummyClient, msg.c_str(), msg.size());
+
+    std::this_thread::sleep_for(std::chrono::seconds(60));
+
+//    gboolean keepResident;
+//    agent_server("/data/local/tmp/tracker/sockets/agent.socket", &keepResident);
+
 //    TcpClientManager tcpClient;
 //    tcpClient.connectTo("127.0.0.1", 4444);
-//
+
 //    LocalClientManager localClient;
 //    localClient.connectTo("/data/local/tmp/tracker/sockets/agent.socket");
 }

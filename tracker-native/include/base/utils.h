@@ -25,8 +25,10 @@
 #define TRACKER_INJECTOR_USING using namespace tracker::injector;
 
 template<typename T>
-std::string join(const std::vector<T> &v, const std::string &sep)
-{
+std::string join(const std::vector<T> &v, const std::string &sep) {
+    if (v.empty()) {
+        return "";
+    }
     std::ostringstream oss;
     const auto LAST = v.end() - 1;
     // Iterate through the first to penultimate items appending the separator.

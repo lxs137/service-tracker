@@ -15,17 +15,15 @@
 
 TRACKER_AGENT_BEGIN
 
-extern const char *LOG_TAG;
+static const char *LOG_TAG = "tracker.agent[" STRINGIFY(ARCH_ABI) "]";
 
 static const std::vector<std::string> IGNORE_MODULES = {
-    "libc.so", "libc++.so", "libutils.so",
+    "libc.so", "libc++.so", "libutils.so", "liblog.so",
     "libagent.so"
 };
+//static const std::vector<std::string> IGNORE_MODULES = { "libagent.so" };
 
-static FridaContext fridaContext = {
-    nullptr,
-    nullptr,
-};
+extern FridaContext *fridaContext;
 
 TRACKER_AGENT_END
 

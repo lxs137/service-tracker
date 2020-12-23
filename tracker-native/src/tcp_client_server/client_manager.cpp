@@ -101,7 +101,7 @@ pipe_ret_t ClientManager::finish(){
 }
 
 void ClientManager::terminateReceiveThread() {
-    if (m_receiveTask != nullptr) {
+    if (m_receiveTask != nullptr && !m_receiveTask->joinable()) {
         m_receiveTask->detach();
         delete m_receiveTask;
         m_receiveTask = nullptr;

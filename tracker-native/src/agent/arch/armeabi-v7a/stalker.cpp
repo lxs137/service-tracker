@@ -2,74 +2,73 @@
 // Created by liao xiangsen on 12/10/20.
 //
 
+#include <iostream>
+#include <map>
+#include <mutex>
+
 #include "frida-gum.h"
 
 #include "agent/utils.h"
+#include "agent/trace_thread_handler.h"
+
+void arm_transformWhileCodeBlockEnd(GumStalkerIterator *iterator, GumStalkerOutput *output, gpointer user_data);
+void arm_trackCodeBlockCoverage(GumCpuContext *cpu_context, gpointer user_data);
 
 TRACKER_AGENT_USING
 using ::LOG_TAG;
+GumStalkerTransformerCallback TraceThreadHandler::transformerPtr = &arm_transformWhileCodeBlockEnd;
+thread_local TransformerContext TraceThreadHandler::transformerContext;
 
 void arm_trackCodeBlockCoverage(GumCpuContext *cpu_context, gpointer user_data) {
-//    GumThreadId curTid = gum_process_get_current_thread_id();
-
-//    ThreadRuntimeInformation * tri;
-//    guint64 n;
-//    guint64 block_id, branch_id;
-//
-//    if (!enabled)
-//        return;
-//
-//    tri = (ThreadRuntimeInformation *)
-//        g_hash_table_lookup(thread_runtime_information_map, GSIZE_TO_POINTER(tid));
-//
-//    block_id = (GPOINTER_TO_UINT(user_data)>>4) ^ (GPOINTER_TO_UINT(user_data) << 8);
-//
-//    branch_id = tri->previous_block_id^block_id;
-//
-//    n = GPOINTER_TO_UINT(g_hash_table_lookup(tri->block_counters, GUINT_TO_POINTER(block_id)));
-////    if (n == 0)
-////        LOGD("new block id %lu", block_id);
-//    g_hash_table_insert(tri->block_counters, GUINT_TO_POINTER(block_id), GUINT_TO_POINTER(n+1));
-//    //LOGD("%li, %li", block_id, n);
-//
-//    n = GPOINTER_TO_UINT(g_hash_table_lookup(tri->branch_counters, GUINT_TO_POINTER(branch_id)));
-//    g_hash_table_insert(tri->branch_counters, GUINT_TO_POINTER(branch_id), GUINT_TO_POINTER(n+1));
-//    //LOGD("%li, %li", branch_id, n);
-//
-//    tri->previous_block_id = block_id>>1;
-
+    ThreadCoverageInfo *info = TraceThreadHandler::transformerContext.coverageInfoPtr;
+    info->incCounter((BlockID) user_data);
+    LOG_INFO("PC at %p, block counter: %d, branch counter: %d", user_data, info->blockCounter.size(), info->branchCounter.size());
 }
 
 void arm_transformWhileCodeBlockEnd(GumStalkerIterator *iterator, GumStalkerOutput *output, gpointer user_data) {
-    GumModuleMap *moduleMap = (GumModuleMap *)user_data;
+    int tid = gum_process_get_current_thread_id();
+    {
+        auto lock = std::unique_lock<std::mutex>(TraceThreadHandler::coverageLock, std::defer_lock);
+        auto it = TraceThreadHandler::coverageInfoMap.find(tid);
+        if (it != TraceThreadHandler::coverageInfoMap.end()) {
+            TraceThreadHandler::transformerContext.coverageInfoPtr = it->second;
+        } else {
+            ThreadCoverageInfo *infoPtr = new ThreadCoverageInfo(tid);
+            TraceThreadHandler::transformerContext.coverageInfoPtr = infoPtr;
+            TraceThreadHandler::coverageInfoMap[tid] = infoPtr;
+        }
+    }
 
     const cs_insn *instructionInfo;
-
-    while (gum_stalker_iterator_next (iterator, &instructionInfo)) {
+    while (gum_stalker_iterator_next(iterator, &instructionInfo)) {
         switch (instructionInfo->id) {
-            /*
-             * Code block ending instruction list is from
-             * frida-gum/gum/backend-arm64/gumstalker-arm64.c:gum_stalker_iterator_keep()
+            /**
+             * Instruction list is from
+             * https://developer.arm.com/documentation/dui0489/i/arm-and-thumb-instructions/branch-and-control-instructions
              */
-            case ARM64_INS_BL:
-            case ARM64_INS_BLR:
-            case ARM64_INS_BLRAA:
-            case ARM64_INS_BLRAAZ:
-            case ARM64_INS_BLRAB:
-            case ARM64_INS_BLRABZ: {
+            case ARM_INS_B:
+            case ARM_INS_BL:
+            case ARM_INS_BX:
+            case ARM_INS_BLX:
+            case ARM_INS_BXJ:
+            case ARM_INS_IT:
+            // switch-case assembly
+            case ARM_INS_TBB:
+            case ARM_INS_TBH:
+            // compare and branch
+            case ARM_INS_CBZ:
+            case ARM_INS_CBNZ: {
 
-                gpointer block_address = GUINT_TO_POINTER(instructionInfo->address);
-                auto findModule = gum_module_map_find(moduleMap, GUM_ADDRESS(block_address));
+                gpointer blockAddress = GUINT_TO_POINTER(instructionInfo->address);
+                auto findModule = gum_module_map_find(fridaContext->moduleMap, GUM_ADDRESS(blockAddress));
                 if (findModule != nullptr) {
-                    LOG_INFO("Transforming instruction in module %s at %p", findModule->name, (void *)GUM_ADDRESS(block_address));
-
-                    block_address =
-                        GUINT_TO_POINTER(
-                            (GUM_ADDRESS(g_str_hash(findModule->name)) << 32) ^
-                            (GUM_ADDRESS(block_address) - findModule->range->base_address)
-                        );
-
-                    gum_stalker_iterator_put_callout(iterator, arm_trackCodeBlockCoverage, block_address, nullptr);
+                    LOG_INFO("Transform inst in module %s at %p", findModule->name, blockAddress);
+//                    gpointer shortAddress = GUINT_TO_POINTER(
+//                        GUM_ADDRESS(g_str_hash(findModule->name))
+//                        ^ ((GUM_ADDRESS(blockAddress) - findModule->range->base_address) >> 1)
+//                    );
+                    gpointer shortAddress = GUINT_TO_POINTER(instructionInfo->address >> 1);
+                    gum_stalker_iterator_put_callout(iterator, arm_trackCodeBlockCoverage, shortAddress, nullptr);
                 }
             }
         }

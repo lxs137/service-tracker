@@ -45,37 +45,65 @@ typedef uintptr_t BlockID;
 typedef uintptr_t BranchID;
 typedef uint32_t Count;
 
+#if defined(__LP64__)
+#define GetBranchID(x,y) ((x << 32 | x >> 32) ^ y)
+#else
+#define GetBranchID(x,y) ((x << 16 | x >> 16) ^ y)
+#endif
+
+const int PRINT_MAX_LEN = 20;
+
 struct ThreadCoverageInfo {
 public:
   int tid;
   // stats
   std::map<BlockID, Count> blockCounter;
-  std::map<BranchID , Count> branchCounter;
+  std::map<BranchID, Count> branchCounter;
   // temp
   BlockID prevBlockID;
+
   ThreadCoverageInfo(int _tid): tid(_tid), prevBlockID(0) {}
   void incCounter(BlockID curBlockID) {
-      auto it = blockCounter.find(curBlockID);
-      if (it == blockCounter.end()) {
+      auto itBlock = blockCounter.find(curBlockID);
+      if (itBlock == blockCounter.end()) {
           blockCounter.emplace(curBlockID, 1);
       } else {
-          blockCounter[curBlockID] = it->second + 1;
+          blockCounter[curBlockID] = itBlock->second + 1;
       }
+
+      BranchID curBranchID = GetBranchID(curBlockID, prevBlockID);
+      auto itBranch = branchCounter.find(curBranchID);
+      if (itBranch == branchCounter.end()) {
+          branchCounter.emplace(curBranchID, 1);
+      } else {
+          branchCounter[curBranchID] = itBranch->second + 1;
+      }
+
+      prevBlockID = curBlockID;
   }
   std::string print() const {
+      int counter;
       std::ostringstream oss;
       oss << "Coverage(tid-" << tid << ") : {" << std::endl;
       if (!blockCounter.empty()) {
+          counter = 0;
           oss << "    block counter: [ ";
           for (auto it : blockCounter) {
               oss << "(" << it.first << ", " << it.second << ") ";
+              if (++counter > PRINT_MAX_LEN) {
+                  break;
+              }
           }
           oss << " ]" << std::endl;
       }
       if (!branchCounter.empty()) {
+          counter = 0;
           oss << "    branch counter: [ ";
           for (auto it : branchCounter) {
               oss << "(" << it.first << ", " << it.second << ") ";
+              if (++counter > PRINT_MAX_LEN) {
+                  break;
+              }
           }
           oss << " ]" << std::endl;
       }
@@ -83,6 +111,11 @@ public:
       return oss.str();
   }
 };
+
+struct TransformerContext {
+  ThreadCoverageInfo* coverageInfoPtr;
+};
+
 
 TRACKER_AGENT_END
 
