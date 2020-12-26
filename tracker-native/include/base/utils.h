@@ -9,6 +9,8 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <iomanip>
+#include <codecvt>
 
 #include <android/log.h>
 
@@ -55,6 +57,13 @@ std::string string_format( const std::string& format, Args ... args )
 
 std::string inline genTagByPid(const char *tag) {
     return string_format("%s[%d]", tag, getpid());
+}
+
+std::string hexDump(const uint8_t *bytes, size_t len);
+
+std::string inline narrowChar16(const char16_t *str16) {
+    std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+    return convert.to_bytes(str16);
 }
 
 #define  LOG_INFO(...)  __android_log_print(ANDROID_LOG_INFO,LOG_TAG,__VA_ARGS__)

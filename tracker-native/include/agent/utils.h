@@ -8,7 +8,7 @@
 #include <iostream>
 #include <map>
 
-#include "frida-gum.h"
+#include <frida-gum.h>
 
 #include "base/utils.h"
 #include "agent/types.h"

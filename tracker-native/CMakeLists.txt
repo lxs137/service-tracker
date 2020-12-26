@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 11)
 
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os -Wall -fPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os -Wall -fPIC -ffunction-sections -ggdb")
+#set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--verbose -Xlinker -v -v")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=gold -Wl,--icf=all")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--gc-sections -Wl,-z,noexecstack")
@@ -20,8 +21,8 @@ add_library(
 )
 set_target_properties(
   log-lib
-  PROPERTIES IMPORTED_LOCATION
-  ${ANDROID_TOOLCHAIN_ROOT}/sysroot/usr/lib/${NDK_LINK_LIB_ARCH}/${ANDROID_PLATFORM}/liblog.so
+  PROPERTIES
+  IMPORTED_LOCATION ${ANDROID_TOOLCHAIN_ROOT}/sysroot/usr/lib/${NDK_LINK_LIB_ARCH}/${ANDROID_PLATFORM}/liblog.so
 )
 add_library(
   dl-lib
@@ -30,8 +31,8 @@ add_library(
 )
 set_target_properties(
   dl-lib
-  PROPERTIES IMPORTED_LOCATION
-  ${ANDROID_TOOLCHAIN_ROOT}/sysroot/usr/lib/${NDK_LINK_LIB_ARCH}/${ANDROID_PLATFORM}/libdl.so
+  PROPERTIES
+  IMPORTED_LOCATION ${ANDROID_TOOLCHAIN_ROOT}/sysroot/usr/lib/${NDK_LINK_LIB_ARCH}/${ANDROID_PLATFORM}/libdl.so
 )
 # Android system libs end
 
@@ -45,8 +46,8 @@ add_library(
 )
 set_target_properties(
   frida-core
-  PROPERTIES IMPORTED_LOCATION
-  ${CMAKE_CURRENT_SOURCE_DIR}/libs/frida-core-14.0.6/${ANDROID_ABI}/libfrida-core.a
+  PROPERTIES
+  IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/libs/frida-core-14.0.6/${ANDROID_ABI}/libfrida-core.a
 )
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/libs/frida-core-14.0.6/${ANDROID_ABI})
 
@@ -57,8 +58,8 @@ add_library(
 )
 set_target_properties(
   frida-gum
-  PROPERTIES IMPORTED_LOCATION
-  ${CMAKE_CURRENT_SOURCE_DIR}/libs/frida-gum-14.0.6/${ANDROID_ABI}/libfrida-gum.a
+  PROPERTIES
+  IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/libs/frida-gum-14.0.6/${ANDROID_ABI}/libfrida-gum-with-cxxbinding.a
 )
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/libs/frida-gum-14.0.6/${ANDROID_ABI})
 # Frida end
@@ -82,6 +83,7 @@ add_library(
 
 SET(
   BASE_SRCS
+  src/base/utils.cpp
   src/base/hack_action.cpp
   src/base/encoder.cpp
 )
@@ -90,6 +92,7 @@ SET(
   src/agent/types.cpp
   src/agent/trace_thread_handler.cpp
   src/agent/query_thread_handler.cpp
+  src/agent/interceptor_handler.cpp
   src/agent/server_main.cpp
 )
 SET(
@@ -132,17 +135,17 @@ target_link_libraries(
 
 
 # Injector begin
-add_executable(
-  injector
-  ${BASE_SRCS}
-  src/injector/inject_agent_handler.cpp
-  src/injector/server_main.cpp
-)
-target_link_libraries(
-  injector
-  frida-core
-  tcp-client-server
-  dl-lib
-  log-lib
-)
+#add_executable(
+#  injector
+#  ${BASE_SRCS}
+#  src/injector/inject_agent_handler.cpp
+#  src/injector/server_main.cpp
+#)
+#target_link_libraries(
+#  injector
+#  frida-core
+#  tcp-client-server
+#  dl-lib
+#  log-lib
+#)
 # Injector end

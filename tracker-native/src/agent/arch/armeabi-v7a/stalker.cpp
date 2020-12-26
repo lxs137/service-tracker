@@ -6,7 +6,7 @@
 #include <map>
 #include <mutex>
 
-#include "frida-gum.h"
+#include <frida-gum.h>
 
 #include "agent/utils.h"
 #include "agent/trace_thread_handler.h"

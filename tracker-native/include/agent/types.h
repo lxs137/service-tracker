@@ -14,7 +14,8 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/prettywriter.h>
 
-#include "frida-gum.h"
+#include <frida-gum.h>
+#include <gumpp.hpp>
 
 #include "base/utils.h"
 #include "base/encoder.h"
@@ -23,6 +24,7 @@ TRACKER_AGENT_BEGIN
 
 struct FridaContext {
   GumStalker *stalker;
+  Gum::Interceptor *interceptor;
   // list of modules in the target process
   GumModuleMap *moduleMap;
 };
@@ -116,6 +118,19 @@ struct TransformerContext {
   ThreadCoverageInfo* coverageInfoPtr;
 };
 
+class Interceptor : public tracker::JSONBase {
+public:
+  std::string moduleName;
+  std::string funcSymbolName;
+  uintptr_t funcAddress; // optional
+
+
+  Interceptor();
+  virtual ~Interceptor();
+  Interceptor(const Interceptor &other);
+  bool Deserialize(const rapidjson::Value &obj) override;
+  bool Serialize(rapidjson::Writer<rapidjson::StringBuffer> *writer) const override;
+};
 
 TRACKER_AGENT_END
 

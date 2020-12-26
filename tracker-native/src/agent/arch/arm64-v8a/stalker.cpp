@@ -2,7 +2,7 @@
 // Created by liao xiangsen on 12/10/20.
 //
 
-#include "frida-gum.h"
+#include <frida-gum.h>
 
 #include "agent/utils.h"
 #include "agent/trace_thread_handler.h"

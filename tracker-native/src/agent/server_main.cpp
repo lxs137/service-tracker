@@ -1,13 +1,18 @@
 #include <string>
 #include <sys/prctl.h>
-#include <agent/trace_thread_handler.h>
+#include <fcntl.h>
+#include <linux/random.h>
+#include <codecvt>
 
-#include "frida-gum.h"
+#include <frida-gum.h>
+#include <gumpp.hpp>
 
 #include "tcp_client_server/local_server.h"
 #include "tcp_client_server/local_client_manager.h"
 #include "agent/utils.h"
+#include "agent/trace_thread_handler.h"
 #include "agent/query_thread_handler.h"
+#include "agent/interceptor_handler.h"
 #include "base/utils.h"
 
 TRACKER_AGENT_USING
@@ -70,6 +75,8 @@ void initFridaContext() {
     GArray *modules = gum_module_map_get_values(fridaContext->moduleMap);
     LOG_INFO("modules count: %d", modules->len);
 
+    fridaContext->interceptor = Gum::Interceptor_obtain();
+
     LOG_INFO("stalker init done");
 }
 
@@ -103,6 +110,12 @@ void agent_server(const gchar *data, gboolean *stay_resident) {
     observerDoTrace.wantedIp = "";
     agentServer.subscribe(observerDoTrace);
 
+    server_observer_t observerDoIntercept;
+    observerDoIntercept.incoming_packet_func = InterceptorHandler::handle;
+    observerDoIntercept.disconnected_func = tracker::logDisconnect;
+    observerDoIntercept.wantedIp = "";
+    agentServer.subscribe(observerDoIntercept);
+
     while(true) {
         Client client = agentServer.acceptClient(10);
         if (!client.isConnected()) {
@@ -117,33 +130,55 @@ void agent_server(const gchar *data, gboolean *stay_resident) {
 void dummy_1() {
     while (true) {
         std::this_thread::sleep_for(std::chrono::seconds(2));
-        LOG_INFO("dummy thread-1 sleeping......");
+        int fd = open("/dev/random", O_RDWR);
+        if (fd < 0) {
+            LOG_INFO("dummy thread-1 open error");
+            continue;
+        }
+        int *ent_count = new int(-1);
+        ioctl(fd, RNDGETENTCNT, ent_count);
+        LOG_INFO("dummy thread-1 ENT_COUNT: %d", *ent_count);
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+        delete ent_count;
+        close(fd);
     }
 }
 
 void dummy_2() {
     while (true) {
-        std::this_thread::sleep_for(std::chrono::seconds(3));
+        std::this_thread::sleep_for(std::chrono::seconds(5));
         LOG_INFO("dummy thread-2 sleeping......");
     }
 }
 
 int main(int argc, char *argv[]) {
-    std::thread dummyThread1(dummy_1), dummyThread2(dummy_2);
+//    std::thread dummyThread1(dummy_1), dummyThread2(dummy_2);
+//    std::thread dummyThread1(dummy_1);
 
     int pid = getpid();
     LOG_INFO("tester server pid: %d", pid);
 
-    checkProcess();
-    initFridaContext();
+//    checkProcess();
+//    initFridaContext();
 
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+//    std::this_thread::sleep_for(std::chrono::seconds(8));
 
-    std::string msg(string_format(R"({ "command": 3, "tids": [%d, %d] })", pid + 1, pid + 2));
-    Client dummyClient;
-    TraceThreadHandler::handle(dummyClient, msg.c_str(), msg.size());
+//    std::string msg(string_format(R"({ "command": 3, "tids": [%d, %d] })", pid + 1, pid + 2));
+    char16_t token[4];
+    token[0] = 'a';
+    token[1] = 'n';
+    token[2] = 'd';
+    token[3] = 0;
+    std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+    std::string a = convert.to_bytes(token);
+//    char tokenReal[4];
+//    narrowChar(const_cast<char16_t *>(token), tokenReal, 4);
+    LOG_INFO("wchar: %s", a.c_str());
+//    std::string msg(R"({ "command": 6, "moduleName": "libcutils.so", "funcSymbol": "ioctl" })");
+//    Client dummyClient;
+//    InterceptorHandler::handle(dummyClient, msg.c_str(), msg.size());
 
-    std::this_thread::sleep_for(std::chrono::seconds(60));
+//    std::this_thread::sleep_for(std::chrono::seconds(60));
 
 //    gboolean keepResident;
 //    agent_server("/data/local/tmp/tracker/sockets/agent.socket", &keepResident);

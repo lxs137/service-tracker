@@ -18,9 +18,15 @@ enum HackActionCommand {
   Invalid = 0,
 
   InjectAgent = 1,
+
   QueryThread = 2,
-  TraceThread = 3,
+
+  TraceThreadCoverage = 3,
   QueryCoverageInfo = 4,
+
+  QueryInterceptor = 5,
+  AttachInterceptor = 6,
+  DetachInterceptor = 7,
 
   MAX_HACK_ACTION_COMMAND,
 };

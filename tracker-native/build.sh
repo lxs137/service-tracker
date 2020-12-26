@@ -28,7 +28,7 @@ for index in "${!TARGET_ANDROID_ABI[@]}"; do
         -DANDROID_PLATFORM=21 ../../
     make -j 4
     [[ -f ./tester ]] && (${ADB_EXE} push tester "/data/local/tmp/tracker/${ABI}/tester")
-    [[ -f ./injector ]] && (${ADB_EXE} push injector "/data/local/tmp/tracker/${ABI}/injector")
+#    [[ -f ./injector ]] && (${ADB_EXE} push injector "/data/local/tmp/tracker/${ABI}/injector")
     [[ -f ./libagent.so ]] && (${ADB_EXE} push libagent.so "/data/local/tmp/tracker/${ABI}/libagent.so")
     popd
     echo "-- Building done"

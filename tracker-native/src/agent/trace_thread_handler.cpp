@@ -17,7 +17,7 @@ std::mutex TraceThreadHandler::coverageLock;
 void TraceThreadHandler::handle(const Client &client, const char *msg, size_t size) {
     HackAction action;
     switch (parseHackAction(action, msg, size)) {
-        case TraceThread: {
+        case TraceThreadCoverage: {
             auto lock = std::unique_lock<std::mutex>(tracingLock, std::defer_lock);
             LOG_INFO("handle TraceThread begin");
 
@@ -78,8 +78,7 @@ void TraceThreadHandler::handle(const Client &client, const char *msg, size_t si
             writer.EndArray();
             Server::sendToClient(client, sb.GetString(), sb.GetSize());
         } break;
-        default:
-            return;
+        default: return;
     }
 }
 
