@@ -27,6 +27,7 @@ struct FridaContext {
   Gum::Interceptor *interceptor;
   // list of modules in the target process
   GumModuleMap *moduleMap;
+  pthread_key_t keyToCoverageInfo;
 };
 
 class ThreadInfo : public tracker::JSONBase {
@@ -55,67 +56,21 @@ typedef uint32_t Count;
 
 const int PRINT_MAX_LEN = 20;
 
+//#define COLLECT_BRANCH_COVERAGE 1
+
 struct ThreadCoverageInfo {
 public:
   int tid;
-  // stats
   std::map<BlockID, Count> blockCounter;
+#ifdef COLLECT_BRANCH_COVERAGE
   std::map<BranchID, Count> branchCounter;
-  // temp
-  BlockID prevBlockID;
+  BlockID prevBlockID = 0;
+#endif
 
-  ThreadCoverageInfo(int _tid): tid(_tid), prevBlockID(0) {}
-  void incCounter(BlockID curBlockID) {
-      auto itBlock = blockCounter.find(curBlockID);
-      if (itBlock == blockCounter.end()) {
-          blockCounter.emplace(curBlockID, 1);
-      } else {
-          blockCounter[curBlockID] = itBlock->second + 1;
-      }
-
-      BranchID curBranchID = GetBranchID(curBlockID, prevBlockID);
-      auto itBranch = branchCounter.find(curBranchID);
-      if (itBranch == branchCounter.end()) {
-          branchCounter.emplace(curBranchID, 1);
-      } else {
-          branchCounter[curBranchID] = itBranch->second + 1;
-      }
-
-      prevBlockID = curBlockID;
-  }
-  std::string print() const {
-      int counter;
-      std::ostringstream oss;
-      oss << "Coverage(tid-" << tid << ") : {" << std::endl;
-      if (!blockCounter.empty()) {
-          counter = 0;
-          oss << "    block counter: [ ";
-          for (auto it : blockCounter) {
-              oss << "(" << it.first << ", " << it.second << ") ";
-              if (++counter > PRINT_MAX_LEN) {
-                  break;
-              }
-          }
-          oss << " ]" << std::endl;
-      }
-      if (!branchCounter.empty()) {
-          counter = 0;
-          oss << "    branch counter: [ ";
-          for (auto it : branchCounter) {
-              oss << "(" << it.first << ", " << it.second << ") ";
-              if (++counter > PRINT_MAX_LEN) {
-                  break;
-              }
-          }
-          oss << " ]" << std::endl;
-      }
-      oss << "}";
-      return oss.str();
-  }
-};
-
-struct TransformerContext {
-  ThreadCoverageInfo* coverageInfoPtr;
+  ThreadCoverageInfo(int _tid): tid(_tid) {}
+  void incCounter(BlockID curBlockID);
+  bool Serialize(rapidjson::Writer<rapidjson::StringBuffer> *writer) const;
+  std::string print() const;
 };
 
 class Interceptor : public tracker::JSONBase {
@@ -123,7 +78,6 @@ public:
   std::string moduleName;
   std::string funcSymbolName;
   uintptr_t funcAddress; // optional
-
 
   Interceptor();
   virtual ~Interceptor();

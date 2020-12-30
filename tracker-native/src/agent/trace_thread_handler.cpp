@@ -53,7 +53,6 @@ void TraceThreadHandler::handle(const Client &client, const char *msg, size_t si
             rapidjson::StringBuffer sb;
             rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(sb);
 
-            LOG_INFO("CoverageInfoMap size: %d", coverageInfoMap.size());
             writer.StartArray();
             for (rapidjson::SizeType i = 0; i < tids.Size(); i++) {
                 auto tid = (GumThreadId) tids[i].GetInt();
@@ -61,19 +60,7 @@ void TraceThreadHandler::handle(const Client &client, const char *msg, size_t si
                 if (infoIt == coverageInfoMap.end()) {
                     continue;
                 }
-
-                writer.StartObject();
-
-                writer.String("tid");
-                writer.Int(tid);
-                writer.String("blockCount");
-                writer.Int(infoIt->second->blockCounter.size());
-                writer.String("branchCount");
-                writer.Int(infoIt->second->branchCounter.size());
-                writer.String("coverage");
-                writer.String(infoIt->second->print().c_str());
-
-                writer.EndObject();
+                infoIt->second->Serialize(&writer);
             }
             writer.EndArray();
             Server::sendToClient(client, sb.GetString(), sb.GetSize());

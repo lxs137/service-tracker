@@ -78,6 +78,12 @@ void initFridaContext() {
     fridaContext->interceptor = Gum::Interceptor_obtain();
 
     LOG_INFO("stalker init done");
+
+    if (pthread_key_create(&(fridaContext->keyToCoverageInfo), nullptr) != 0) {
+        LOG_FAULT("create TLS for CoverageInfo error");
+    }
+
+    LOG_INFO("context init done");
 }
 
 extern "C"
@@ -152,41 +158,25 @@ void dummy_2() {
 }
 
 int main(int argc, char *argv[]) {
-//    std::thread dummyThread1(dummy_1), dummyThread2(dummy_2);
+    std::thread dummyThread1(dummy_1), dummyThread2(dummy_2);
 //    std::thread dummyThread1(dummy_1);
 
     int pid = getpid();
     LOG_INFO("tester server pid: %d", pid);
 
-//    checkProcess();
-//    initFridaContext();
+    std::this_thread::sleep_for(std::chrono::seconds(15));
 
-//    std::this_thread::sleep_for(std::chrono::seconds(8));
+    checkProcess();
+    initFridaContext();
 
-//    std::string msg(string_format(R"({ "command": 3, "tids": [%d, %d] })", pid + 1, pid + 2));
-    char16_t token[4];
-    token[0] = 'a';
-    token[1] = 'n';
-    token[2] = 'd';
-    token[3] = 0;
-    std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
-    std::string a = convert.to_bytes(token);
-//    char tokenReal[4];
-//    narrowChar(const_cast<char16_t *>(token), tokenReal, 4);
-    LOG_INFO("wchar: %s", a.c_str());
+//    std::string msg(string_format(R"({ "command": 3, "tids": [%d] })", pid + 1));
 //    std::string msg(R"({ "command": 6, "moduleName": "libcutils.so", "funcSymbol": "ioctl" })");
 //    Client dummyClient;
-//    InterceptorHandler::handle(dummyClient, msg.c_str(), msg.size());
+//    TraceThreadHandler::handle(dummyClient, msg.c_str(), msg.size());
 
 //    std::this_thread::sleep_for(std::chrono::seconds(60));
 
-//    gboolean keepResident;
-//    agent_server("/data/local/tmp/tracker/sockets/agent.socket", &keepResident);
-
-//    TcpClientManager tcpClient;
-//    tcpClient.connectTo("127.0.0.1", 4444);
-
-//    LocalClientManager localClient;
-//    localClient.connectTo("/data/local/tmp/tracker/sockets/agent.socket");
+    gboolean keepResident;
+    agent_server("/data/local/tmp/tracker/sockets/tester.socket", &keepResident);
 }
 

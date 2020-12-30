@@ -17,14 +17,13 @@
 TRACKER_AGENT_BEGIN
 
 namespace TraceThreadHandler {
-  extern thread_local TransformerContext transformerContext;
-
   extern const char *LOG_TAG;
 
   extern GumStalkerTransformerCallback transformerPtr;
 
   extern std::mutex tracingLock, coverageLock;
   static std::vector<GumThreadId> followingThreads;
+
   extern std::map<GumThreadId, ThreadCoverageInfo*> coverageInfoMap;
 
   extern void handle(const Client & client, const char * msg, size_t size);

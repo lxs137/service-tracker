@@ -17,26 +17,23 @@ void arm_trackCodeBlockCoverage(GumCpuContext *cpu_context, gpointer user_data);
 TRACKER_AGENT_USING
 using ::LOG_TAG;
 GumStalkerTransformerCallback TraceThreadHandler::transformerPtr = &arm_transformWhileCodeBlockEnd;
-thread_local TransformerContext TraceThreadHandler::transformerContext;
 
 void arm_trackCodeBlockCoverage(GumCpuContext *cpu_context, gpointer user_data) {
-    ThreadCoverageInfo *info = TraceThreadHandler::transformerContext.coverageInfoPtr;
-    info->incCounter((BlockID) user_data);
-    LOG_INFO("PC at %p, block counter: %d, branch counter: %d", user_data, info->blockCounter.size(), info->branchCounter.size());
+    void *ptr = pthread_getspecific(fridaContext->keyToCoverageInfo);
+    assert(ptr != nullptr);
+    auto infoPtr = static_cast<ThreadCoverageInfo*>(ptr);
+    infoPtr->incCounter((BlockID) user_data);
+    LOG_INFO("PC at %p, block counter: %d", user_data, infoPtr->blockCounter.size());
 }
 
 void arm_transformWhileCodeBlockEnd(GumStalkerIterator *iterator, GumStalkerOutput *output, gpointer user_data) {
-    int tid = gum_process_get_current_thread_id();
-    {
+    void *ptr = pthread_getspecific(fridaContext->keyToCoverageInfo);
+    if (ptr == nullptr) {
         auto lock = std::unique_lock<std::mutex>(TraceThreadHandler::coverageLock, std::defer_lock);
-        auto it = TraceThreadHandler::coverageInfoMap.find(tid);
-        if (it != TraceThreadHandler::coverageInfoMap.end()) {
-            TraceThreadHandler::transformerContext.coverageInfoPtr = it->second;
-        } else {
-            ThreadCoverageInfo *infoPtr = new ThreadCoverageInfo(tid);
-            TraceThreadHandler::transformerContext.coverageInfoPtr = infoPtr;
-            TraceThreadHandler::coverageInfoMap[tid] = infoPtr;
-        }
+        int tid = gum_process_get_current_thread_id();
+        auto infoPtr = new ThreadCoverageInfo(tid);
+        pthread_setspecific(fridaContext->keyToCoverageInfo, infoPtr);
+        TraceThreadHandler::coverageInfoMap[tid] = infoPtr;
     }
 
     const cs_insn *instructionInfo;
