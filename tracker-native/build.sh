@@ -28,9 +28,18 @@ for index in "${!TARGET_ANDROID_ABI[@]}"; do
         -DANDROID_PLATFORM=21 ../../ \
         -DCMAKE_BUILD_TYPE=DEBUG
     make -j 4
-    [[ -f ./tester ]] && (${ADB_EXE} push tester "/data/local/tmp/tracker/${ABI}/tester")
-#    [[ -f ./injector ]] && (${ADB_EXE} push injector "/data/local/tmp/tracker/${ABI}/injector")
-    [[ -f ./libagent.so ]] && (${ADB_EXE} push libagent.so "/data/local/tmp/tracker/${ABI}/libagent.so")
+    [[ -f ./tester ]] \
+      && ${ADB_EXE} shell su -c "rm -rf /data/local/tmp/tracker/${ABI}/tester" \
+      && ${ADB_EXE} push tester "/data/local/tmp/tracker/${ABI}/tester"
+    [[ -f ./injector ]] \
+      && ${ADB_EXE} shell su -c "rm -rf /data/local/tmp/tracker/${ABI}/injector" \
+      && ${ADB_EXE} push injector "/data/local/tmp/tracker/${ABI}/injector"
+    [[ -f ./libagent.so ]] \
+      && ${ADB_EXE} shell su -c "rm -rf /data/local/tmp/tracker/${ABI}/libagent.so" \
+      && ${ADB_EXE} push libagent.so "/data/local/tmp/tracker/${ABI}/libagent.so"
+    [[ -f ./libbypass_hacking.so ]] \
+      && ${ADB_EXE} shell su -c "rm -rf /data/local/tmp/tracker/${ABI}/libbypass_hacking.so" \
+      && ${ADB_EXE} push libbypass_hacking.so "/data/local/tmp/tracker/${ABI}/libbypass_hacking.so"
     popd
     echo "-- Building done"
     echo ""

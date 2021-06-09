@@ -100,7 +100,7 @@ SET(
   src/agent/arch/${ANDROID_ABI}/stalker.cpp
 )
 
-# Agent begin
+# Agent
 add_library(
   agent
   MODULE
@@ -115,7 +115,20 @@ target_link_libraries(
   dl-lib
   log-lib
 )
-# Agent end
+
+# bypass hacking
+add_library(
+  bypass_hacking
+  MODULE
+  ${BASE_SRCS}
+  src/agent/bypass_hacking.cpp
+)
+target_link_libraries(
+  bypass_hacking
+  frida-gum
+  dl-lib
+  log-lib
+)
 
 # Just for debug
 add_executable(
@@ -131,21 +144,18 @@ target_link_libraries(
   dl-lib
   log-lib
 )
-# end
 
-
-# Injector begin
-#add_executable(
-#  injector
-#  ${BASE_SRCS}
-#  src/injector/inject_agent_handler.cpp
-#  src/injector/server_main.cpp
-#)
-#target_link_libraries(
-#  injector
-#  frida-core
-#  tcp-client-server
-#  dl-lib
-#  log-lib
-#)
-# Injector end
+# Injector
+add_executable(
+  injector
+  ${BASE_SRCS}
+  src/injector/inject_agent_handler.cpp
+  src/injector/server_main.cpp
+)
+target_link_libraries(
+  injector
+  frida-core
+  tcp-client-server
+  dl-lib
+  log-lib
+)

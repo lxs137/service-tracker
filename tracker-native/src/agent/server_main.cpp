@@ -68,10 +68,8 @@ void initFridaContext() {
     gum_stalker_set_trust_threshold(fridaContext->stalker, 2);
 
     gum_process_enumerate_modules(excludeModule, nullptr);
-
     fridaContext->moduleMap = gum_module_map_new_filtered(excludeModule, nullptr, nullptr);
     gum_module_map_update(fridaContext->moduleMap);
-
     GArray *modules = gum_module_map_get_values(fridaContext->moduleMap);
     LOG_INFO("modules count: %d", modules->len);
 

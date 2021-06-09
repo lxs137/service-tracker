@@ -8,4 +8,9 @@ public class Config {
 
     public static final String AGENT_LIB_PATH_32BIT = "/data/local/tmp/tracker/armeabi-v7a/libagent.so";
     public static final String AGENT_LIB_PATH_64BIT = "/data/local/tmp/tracker/arm64-v8a/libagent.so";
+
+    public static final String AGENT_LISTEN_SOCKET_DIR = "/data/local/tmp/tracker/sockets";
+    public static String getAgentListenSocket(int pid) {
+        return String.format("%s/agent.%d.socket", AGENT_LISTEN_SOCKET_DIR, pid);
+    }
 }

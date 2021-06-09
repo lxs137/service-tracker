@@ -65,6 +65,14 @@ void TraceThreadHandler::handle(const Client &client, const char *msg, size_t si
             writer.EndArray();
             Server::sendToClient(client, sb.GetString(), sb.GetSize());
         } break;
+        case ResetCoverageInfo: {
+            auto lock = std::unique_lock<std::mutex>(TraceThreadHandler::coverageLock, std::defer_lock);
+            for (auto &infoIt : coverageInfoMap) {
+                infoIt.second->reset();
+            }
+            const char *replyStr = basicReply(true);
+            Server::sendToClient(client, replyStr, strlen(replyStr));
+        } break;
         default: return;
     }
 }

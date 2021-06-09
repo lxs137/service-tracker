@@ -1,6 +1,6 @@
 #!/bin/bash
 
-fswatch -o -r -l 5 \
+fswatch -o -r -l 3 \
     --exclude 'tracker/.externalNativeBuild' \
     --exclude 'tracker/build' \
     --exclude 'tracker/.gradle' ./tracker | while read f; 

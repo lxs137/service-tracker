@@ -1,13 +1,13 @@
 package io.menya.tracker.hack.injector;
 
-import org.json.JSONException;
+
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -31,9 +31,8 @@ public abstract class InjectorHackAction extends HackAction {
         }
     }
 
-    protected void requestAndWaitReplyFromSocket(Socket socket) throws Exception {
+    protected JSONObject requestAndWaitReplyFromSocket(Socket socket) throws Exception {
         OutputStream output = socket.getOutputStream();
-        byte[] request = this.encodeRequest();
         output.write(this.encodeRequest());
 
         InputStream input = socket.getInputStream();
@@ -41,7 +40,8 @@ public abstract class InjectorHackAction extends HackAction {
         String line;
         while ((line = reader.readLine()) != null) {
             Log.info(TAG, "RPC got reply: %s", line);
-            this.decodeReply(line);
+            return new JSONObject(line);
         }
+        return null;
     }
 }

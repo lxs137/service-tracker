@@ -1,5 +1,8 @@
 package io.menya.tracker.utils;
 
+import android.net.LocalSocket;
+import android.net.LocalSocketAddress;
+
 import org.apache.commons.lang3.RegExUtils;
 
 import java.io.BufferedReader;
@@ -51,5 +54,15 @@ public class ProcessUtils {
         } catch (IOException | InterruptedException e) {
             return null;
         }
+    }
+
+    public static boolean testUnixDomainSocket(String path) {
+        LocalSocket socket = new LocalSocket();
+        try {
+            socket.connect(new LocalSocketAddress(path));
+        } catch (IOException ignore) {
+            return false;
+        }
+        return true;
     }
 }

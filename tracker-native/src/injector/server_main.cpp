@@ -3,6 +3,7 @@
 //
 #include <iostream>
 
+#include <frida-core.h>
 #include <frida-gum.h>
 
 #include "tcp_client_server/tcp_server.h"
@@ -10,12 +11,19 @@
 #include "injector/utils.h"
 #include "base/utils.h"
 
+void init_frida_context() {
+    frida_init();
+//    frida_selinux_patch_policy();
+}
+
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         std::cerr << "usage: ./injector [listen_port]" << std::endl;
         return -1;
     }
     int port = std::stoi(argv[1]);
+
+    init_frida_context();
 
     TCPServer injectorServer(port);
     pipe_ret_t setupRet = injectorServer.startServer();

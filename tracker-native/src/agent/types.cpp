@@ -26,6 +26,14 @@ void ThreadCoverageInfo::incCounter(BlockID curBlockID) {
 #endif
 }
 
+void ThreadCoverageInfo::reset() {
+    blockCounter.clear();
+#ifdef COLLECT_BRANCH_COVERAGE
+    branchCounter.clear();
+    prevBlockID = 0;
+#endif
+}
+
 bool ThreadCoverageInfo::Serialize(rapidjson::Writer<rapidjson::StringBuffer> *writer) const {
     writer->StartObject();
 

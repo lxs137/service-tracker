@@ -69,6 +69,7 @@ public:
 
   ThreadCoverageInfo(int _tid): tid(_tid) {}
   void incCounter(BlockID curBlockID);
+  void reset();
   bool Serialize(rapidjson::Writer<rapidjson::StringBuffer> *writer) const;
   std::string print() const;
 };

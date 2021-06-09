@@ -31,7 +31,6 @@ void InjectAgentHandler::handle(const Client &client, const char *msg, size_t si
     const char *agentEntry = action.data["entryPoint"].GetString();
     const char *agentArgs = action.data["agentArgs"].GetString();
 
-    frida_init();
     frida_selinux_patch_policy();
     if (setxattr(agentPath, XATTR_NAME_SELINUX, selinux_context,
             strlen(selinux_context) + 1, 0) != 0) {
@@ -54,7 +53,6 @@ void InjectAgentHandler::handle(const Client &client, const char *msg, size_t si
 
     frida_injector_close_sync(injector, nullptr, nullptr);
     frida_unref(injector);
-    frida_deinit();
 
     const char *replyStr = basicReply(true);
     Server::sendToClient(client, replyStr, strlen(replyStr));

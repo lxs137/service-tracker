@@ -23,10 +23,10 @@ enum HackActionCommand {
 
   TraceThreadCoverage = 3,
   QueryCoverageInfo = 4,
+  ResetCoverageInfo = 5,
 
-  QueryInterceptor = 5,
   AttachInterceptor = 6,
-  DetachInterceptor = 7,
+  QueryInterceptor = 7,
 
   MAX_HACK_ACTION_COMMAND,
 };

@@ -15,9 +15,14 @@ public class OptionsHelper {
         Option action = new Option("a", "action", true, "what to do");
         action.setRequired(true);
         options.addOption(action);
+
         Option targetPid = new Option("pid", "pid", true, "trace pid");
         targetPid.setRequired(true);
         options.addOption(targetPid);
+
+        Option targetTid = new Option("tid", "tid", true, "trace tid");
+        targetPid.setRequired(true);
+        options.addOption(targetTid);
 
         try {
             OptionsHelper.cmd = new DefaultParser().parse(options, args);
@@ -36,5 +41,9 @@ public class OptionsHelper {
 
     public static int getTargetPid() {
         return Integer.parseInt(cmd.getOptionValue("pid"));
+    }
+
+    public static int getTargetThreadID() {
+        return Integer.parseInt(cmd.getOptionValue("tid"));
     }
 }

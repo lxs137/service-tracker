@@ -6,11 +6,12 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.menya.tracker.utils.Log;
 import io.menya.tracker.utils.ReflectHelper;
 
-public class ServiceManager {
+public class ServiceManagerHelper {
     private final static String TAG = "ServiceManager";
     private static Object managerBinderRef;
 
@@ -42,8 +43,10 @@ public class ServiceManager {
     }
 
     private static ServiceInfo parseServiceInfo(String serviceName) {
-        IBinder service = findServiceAtServiceManager(serviceName);
-        if (service == null) {
+        IBinder service;
+        try {
+            service = getServiceInterface(serviceName);
+        } catch (Exception e) {
             Log.error(TAG, null, "service '%s' not registered", serviceName);
             return null;
         }
@@ -79,13 +82,58 @@ public class ServiceManager {
         return serviceInfo;
     }
 
-    private static IBinder findServiceAtServiceManager(String serviceName) {
+    public static IBinder getServiceInterface(String serviceName) throws Exception {
         Class<?>[] getServiceArgsClazz = new Class[1];
         getServiceArgsClazz[0] = String.class;
-        IBinder iBinder = null;
-        try {
-            iBinder = (IBinder) ReflectHelper.callMethod(managerBinderRef, "getService", getServiceArgsClazz, serviceName);
-        } catch (IllegalAccessException | InvocationTargetException ignored) {}
-        return iBinder;
+        return (IBinder) ReflectHelper.callMethod(managerBinderRef, "getService", getServiceArgsClazz, serviceName);
+    }
+
+    /**
+     * Works when Service impl in Java
+     */
+    public static Object getServiceStub(String serviceName) throws Exception {
+        IBinder serviceInterface = getServiceInterface(serviceName);
+        if (serviceInterface == null) {
+            return null;
+        }
+
+        String descriptor = serviceInterface.getInterfaceDescriptor();
+        Class<?> innerClass = Class.forName(descriptor + "$Stub");
+
+        Class[] cArg = new Class[1];
+        cArg[0] = IBinder.class;
+        Method m = innerClass.getDeclaredMethod("asInterface", cArg);
+
+        Object[] oArg = new Object[1];
+        oArg[0] = serviceInterface;
+        return m.invoke(null, oArg);
+    }
+
+    /**
+     * Works when Service impl in Java
+     */
+    public static Object getServiceStub(String serviceName, final AtomicBoolean serviceDead) throws Exception {
+        IBinder serviceInterface = getServiceInterface(serviceName);
+        if (serviceInterface == null) {
+            return null;
+        }
+
+        serviceInterface.linkToDeath(new IBinder.DeathRecipient() {
+            @Override
+            public void binderDied() {
+                serviceDead.set(true);
+            }
+        }, 0);
+
+        String descriptor = serviceInterface.getInterfaceDescriptor();
+        Class<?> innerClass = Class.forName(descriptor + "$Stub");
+
+        Class[] cArg = new Class[1];
+        cArg[0] = IBinder.class;
+        Method m = innerClass.getDeclaredMethod("asInterface", cArg);
+
+        Object[] oArg = new Object[1];
+        oArg[0] = serviceInterface;
+        return m.invoke(null, oArg);
     }
 }
